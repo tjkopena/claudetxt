@@ -1,0 +1,13 @@
+● Bash(cargo test 2>&1)
+  ⎿  Error: Exit code 101
+        Compiling claudemd v0.1.0 (/home/joe/code/claudemd)
+     error[E0061]: this function takes 5 arguments but 4 arguments were supplied
+        --> src/html.rs:493:20
+         |
+     493 |         let html = generate_html(&blocks, None, "User", "Test Title");
+         |                    ^^^^^^^^^^^^^------------------------------------- argument #5 of type `bool` is
+     missing
+         |
+     note: function defined here
+        --> src/html.rs:10:8
+     … +90 lines (ctrl+o to see all)

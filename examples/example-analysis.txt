@@ -1,0 +1,63 @@
+                                                                                
+╭─── Claude Code v2.1.7 ───────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│               Welcome back tjkopena!               │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│                                                    │                         │
+│     Opus 4.5 · API Usage Billing · tjkopena‘s      │                         │
+│     Individual Org                                 │                         │
+│                       ~/hack                       │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                
+❯ Explain the two Python programs in this directory, ignoring the venv/         
+  folder                                                                        
+                                                                                
+● Search(pattern: "*.py")                                                       
+  ⎿  Found 100 files (ctrl+o to expand)                                         
+                                                                                
+● Let me search more specifically for Python files outside the venv folder.     
+                                                                                
+● Bash(find /home/joe/hack -maxdepth 1 -name "*.py" -type f)                    
+  ⎿  /home/joe/hack/mod-track.py                                                
+     /home/joe/hack/album-fix.py                                                
+                                                                                
+● Read(album-fix.py)                                                            
+  ⎿  Read 20 lines                                                              
+                                                                                
+● Read(mod-track.py)                                                            
+  ⎿  Read 66 lines                                                              
+                                                                                
+● Here are the two Python programs:                                             
+                                                                                
+  1. album-fix.py                                                               
+                                                                                
+  A script to batch-update the artist tag on MP3 files. It:                     
+  - Uses the mutagen library for MP3 ID3 tag manipulation                       
+  - Finds all MP3 files matching the glob pattern Andrew Lloyd Webber/*/*.mp3   
+  - Sets the artist tag to "Andrew Lloyd Webber" for each file                  
+  - Currently prints the file info but doesn't save changes (the mp3.save() call
+   is commented out on line 18)                                                 
+                                                                                
+  This appears to be a work-in-progress script for fixing artist metadata on a  
+  music collection.                                                             
+                                                                                
+  2. mod-track.py                                                               
+                                                                                
+  A command-line utility to modify track numbers in MP3 files by adding an      
+  offset. It:                                                                   
+  - Takes a number (offset) and one or more MP3 files as arguments              
+  - Reads the existing TRCK ID3 tag from each file                              
+  - Adds the offset to the current track number                                 
+  - Preserves the "track/total" format if present (e.g., "5/12" becomes "15/12" 
+  with offset 10)                                                               
+  - Saves the modified track number back to the file                            
+                                                                                
+  Usage: python mod-track.py <offset> <file1.mp3> [file2.mp3 ...]               
+                                                                                
+  This is useful when merging albums or renumbering tracks in a playlist.       
+                                                                                
+  Both scripts depend on the mutagen library for MP3 metadata handling.         
+
