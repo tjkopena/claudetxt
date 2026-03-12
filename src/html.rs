@@ -64,6 +64,20 @@ pub fn generate_html(blocks: &[Block], custom_banner: Option<&str>, username: &s
             Block::Empty => {
                 // Skip consecutive empty blocks
             }
+            Block::UsageReport(text) => {
+                let escaped = escape_html(text);
+                body.push_str(&format!(
+                    "        <div class=\"usage-report\"><span class=\"usage-bullet\">✻</span><em>{}</em></div>\n",
+                    escaped
+                ));
+            }
+            Block::Text(text) => {
+                let escaped = escape_html(text);
+                body.push_str(&format!(
+                    "        <div class=\"text\">{}</div>\n",
+                    escaped
+                ));
+            }
         }
         i += 1;
     }
@@ -398,71 +412,17 @@ fn format_qa_item(question: &str, answer: &str, username: &str) -> String {
 }
 
 /// Renders an approval block (User approved Claude's plan).
-/// The details from the tool output are rendered as a tool invocation.
+/// The message is rendered as a tool invocation and the full details as its tool output.
 fn render_approval(message: &str, details: &str) -> String {
     let escaped_message = escape_html(message);
+    let escaped_details = escape_html(details);
 
-    // Look for the marker that ends the invocation part: " · /plan to edit" or similar
-    // Everything after that marker (on new lines) is plan content
-
-    // Find where the invocation ends and content begins
-    let mut invocation_end = details.len();
-    let mut found_marker = false;
-
-    for (i, line) in details.lines().enumerate() {
-        let trimmed = line.trim();
-        if trimmed.ends_with("edit") || trimmed.ends_with("edit)") {
-            // Find byte position after this line
-            let mut pos = 0;
-            for (j, l) in details.lines().enumerate() {
-                pos += l.len() + 1; // +1 for newline
-                if j == i {
-                    invocation_end = pos;
-                    found_marker = true;
-                    break;
-                }
-            }
-            break;
-        }
-    }
-
-    let (invocation_part, content_part) = if found_marker && invocation_end < details.len() {
-        let inv = &details[..invocation_end];
-        let content = &details[invocation_end..];
-        (inv, content)
-    } else {
-        (details, "")
-    };
-
-    // Join invocation lines with spaces
-    let invocation_text = invocation_part
-        .lines()
-        .map(|l| l.trim())
-        .collect::<Vec<_>>()
-        .join(" ");
-    let escaped_invocation = escape_html(&invocation_text);
-
-    let mut html = format!(
-        r#"        <div class="claude-message">
-            <p>{}</p>
-        </div>
-        <div class="tool-invocation"><span class="tool-bullet">●</span><code class="tool-call">{}</code></div>
+    format!(
+        r#"        <div class="tool-invocation"><span class="tool-bullet">●</span><code class="tool-call">{}</code></div>
+        <div class="tool-output"><span class="output-pipe">⎿</span><pre class="tool-result">{}</pre></div>
 "#,
-        escaped_message, escaped_invocation
-    );
-
-    // If there's remaining content, render it as tool output
-    let trimmed_content = content_part.trim();
-    if !trimmed_content.is_empty() {
-        let escaped_content = escape_html(trimmed_content);
-        html.push_str(&format!(
-            r#"        <div class="tool-output"><span class="output-pipe">⎿</span><pre class="tool-result">{}</pre></div>
-"#,
-            escaped_content
-        ));
-    }
-
-    html
+        escaped_message, escaped_details
+    )
 }
 
 /// Checks if text appears to be simple (no HTML tags).

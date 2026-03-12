@@ -211,6 +211,11 @@ body {
     margin-bottom: 0.25rem;
 }
 
+.usage-bullet {
+    user-select: none;
+    margin-right: 0.5rem;
+}
+
 pre, code {
     font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
     font-size: 0.875rem;

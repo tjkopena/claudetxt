@@ -75,14 +75,48 @@ fn find_double_char(chars: &[char], start: usize, target: char) -> Option<usize>
     None
 }
 
-/// Detects if a Claude message is a tool call (like "Search(...)" or "Bash(...)")
+/// Detects if a Claude message is a tool call.
+/// Matches:
+/// - Lines starting with an identifier followed by parenthesized arguments: `Bash(command)`
+/// - "Read N file(s) (ctrl+o to expand)" summary lines
+/// - "Updated plan"
+/// - "Tool loaded."
 pub fn is_tool_call(text: &str) -> bool {
-    let tool_patterns = [
-        "Search(", "Bash(", "Read(", "Write(", "Edit(", "Glob(", "Grep(", "Task(",
-        "Update(", "Updated plan",
-    ];
     let first_line = text.lines().next().unwrap_or("");
-    tool_patterns.iter().any(|p| first_line.contains(p))
+
+    // Check for identifier followed by opening paren: e.g. "Bash(", "Read("
+    let mut chars = first_line.chars();
+    if let Some(c) = chars.next() {
+        if c.is_ascii_alphabetic() || c == '_' {
+            for ch in chars {
+                if ch == '(' {
+                    return true;
+                }
+                if !ch.is_ascii_alphanumeric() && ch != '_' {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Special non-parenthesized patterns
+    first_line == "Updated plan"
+        || first_line == "Tool loaded."
+        || is_read_files_summary(first_line)
+        || is_searched_summary(first_line)
+}
+
+/// Detects "Read N file(s) (ctrl+o to expand)" summary lines.
+fn is_read_files_summary(line: &str) -> bool {
+    line.starts_with("Read ")
+        && line.ends_with(" (ctrl+o to expand)")
+        && line.contains(" file")
+}
+
+/// Detects "Searched for N pattern(s)" summary lines.
+fn is_searched_summary(line: &str) -> bool {
+    line.starts_with("Searched for ")
+        && line.contains(" pattern")
 }
 
 /// Detects if a tool call is an Update() which produces diff output
@@ -270,40 +304,40 @@ fn strip_number_prefix(line: &str) -> &str {
     &line[byte_offset..]
 }
 
-/// Renders a paragraph that may contain inline bullet points.
+/// Renders a paragraph that may contain inline bullet points or numbered lists.
 fn render_paragraph(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
 
-    // Check if there are any bullet points in the text
+    // Check if there are any bullet points or numbered items in the text
     let has_bullets = lines.iter().any(|l| {
         let t = l.trim();
         t.starts_with("- ") || t.starts_with("* ")
     });
+    let has_numbered = lines.iter().any(|l| line_starts_with_number(l.trim()));
 
-    if !has_bullets {
+    if !has_bullets && !has_numbered {
         // Simple paragraph - join lines with spaces (newlines are just console wrapping)
         let joined = text.lines().map(|l| l.trim()).collect::<Vec<_>>().join(" ");
         let content = transform_inline(&joined);
         return format!("            <p>{}</p>", content);
     }
 
-    // Split into intro text and bullet list
+    // Split into intro text and list items
     let mut intro_lines = Vec::new();
-    let mut bullet_lines = Vec::new();
-    let mut in_bullets = false;
+    let mut list_lines = Vec::new();
+    let mut in_list = false;
 
     for line in lines {
         let trimmed = line.trim();
-        if trimmed.starts_with("- ") || trimmed.starts_with("* ") {
-            in_bullets = true;
-            bullet_lines.push(trimmed);
-        } else if in_bullets {
-            // Continuation or end of bullets
+        if trimmed.starts_with("- ") || trimmed.starts_with("* ") || line_starts_with_number(trimmed) {
+            in_list = true;
+            list_lines.push(trimmed);
+        } else if in_list {
+            // Continuation or end of list
             if trimmed.is_empty() {
-                // End of bullet section
                 break;
             }
-            bullet_lines.push(trimmed);
+            list_lines.push(trimmed);
         } else {
             intro_lines.push(trimmed);
         }
@@ -318,10 +352,14 @@ fn render_paragraph(text: &str) -> String {
         html.push_str(&format!("            <p>{}</p>\n", content));
     }
 
-    // Render bullet list
-    if !bullet_lines.is_empty() {
-        let bullet_text = bullet_lines.join("\n");
-        html.push_str(&render_bullet_list(&bullet_text));
+    // Render list
+    if !list_lines.is_empty() {
+        let list_text = list_lines.join("\n");
+        if has_numbered {
+            html.push_str(&render_numbered_list(&list_text));
+        } else {
+            html.push_str(&render_bullet_list(&list_text));
+        }
     }
 
     html

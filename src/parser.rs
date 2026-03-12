@@ -11,6 +11,10 @@ pub enum Block {
     ToolOutput(String),
     /// Empty lines for spacing
     Empty,
+    /// Usage report lines (starting with ✻)
+    UsageReport(String),
+    /// Unrecognized lines that don't match any known marker
+    Text(String),
 }
 
 /// Extracts the username from a banner block.
@@ -68,6 +72,14 @@ pub fn parse(input: &str) -> Vec<Block> {
         // Check for user prompt (❯)
         if trimmed.starts_with('❯') {
             let prompt_text = trimmed.trim_start_matches('❯').trim();
+
+            // "❯ Tool loaded." lines are tool invocations, not user prompts
+            if prompt_text == "Tool loaded." {
+                blocks.push(Block::ClaudeMessage(prompt_text.to_string()));
+                i += 1;
+                continue;
+            }
+
             let mut full_prompt = prompt_text.to_string();
             i += 1;
             // Collect continuation lines (indented, not starting with special chars)
@@ -230,7 +242,16 @@ pub fn parse(input: &str) -> Vec<Block> {
             continue;
         }
 
-        // Skip other lines (likely trailing whitespace or noise)
+        // Check for usage report (✻)
+        if trimmed.starts_with('✻') {
+            let report_text = trimmed.trim_start_matches('✻').trim();
+            blocks.push(Block::UsageReport(report_text.to_string()));
+            i += 1;
+            continue;
+        }
+
+        // Capture unrecognized lines as Text blocks
+        blocks.push(Block::Text(trimmed.to_string()));
         i += 1;
     }
 
